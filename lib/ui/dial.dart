@@ -570,28 +570,41 @@ class ScheduleDial extends StatelessWidget {
                   if (scale.wake != null ||
                       scale.bed != null ||
                       scale.predictedBed != null)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 30,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          Expanded(
-                            child: InkWell(
-                              key: const ValueKey('debug_wake_up_button'),
-                              hoverColor: Colors.transparent,
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: () {
-                                final wakeEntry = c
-                                    .scheduleEntriesForDay(day)
-                                    .where((e) => e.kind == ActivityKind.wakeUp)
-                                    .firstOrNull;
+                    for (final isWake in [true, false])
+                      Positioned(
+                        left:
+                            size / 2 +
+                            math.cos(isWake ? math.pi * .75 : math.pi * 2.25) *
+                                size *
+                                .445 -
+                            math.min(140.0, size * .36) / 2,
+                        top:
+                            size / 2 +
+                            math.sin(math.pi * .75) * size * .445 -
+                            22,
+                        width: math.min(140.0, size * .36),
+                        child: InkWell(
+                          key: ValueKey(
+                            isWake
+                                ? 'debug_wake_up_button'
+                                : 'debug_predicted_bedtime_button',
+                          ),
+                          splashFactory: NoSplash.splashFactory,
+                          highlightColor: Colors.transparent,
+                          hoverColor: Colors.transparent,
+                          focusColor: Colors.transparent,
+                          onTap: () {
+                            if (isWake) {
+                              final entry = visibleEntries
+                                  .where((e) => e.kind == ActivityKind.wakeUp)
+                                  .firstOrNull;
+                              if (entry != null) {
+                                showEntrySummary(context, c, entry);
+                              } else {
                                 showEditor(
                                   context,
                                   c,
                                   ActivityKind.wakeUp,
-                                  entry: wakeEntry,
                                   initialStart: isToday
                                       ? c.now
                                       : DateTime(
@@ -601,57 +614,44 @@ class ScheduleDial extends StatelessWidget {
                                           7,
                                         ),
                                 );
-                              },
-                              child: _anchor(
-                                c,
-                                scale.wake,
-                                'Wake-up',
-                                'wake_up_icon.png',
-                              ),
-                            ),
+                              }
+                            } else {
+                              final entry = visibleEntries
+                                  .where((e) => e.kind == ActivityKind.bedtime)
+                                  .firstOrNull;
+                              if (entry != null) {
+                                showEntrySummary(context, c, entry);
+                              } else {
+                                showPredictionSummary(
+                                  context,
+                                  c,
+                                  ActivityKind.bedtime,
+                                  start:
+                                      scale.predictedBed ??
+                                      DateTime(
+                                        day.year,
+                                        day.month,
+                                        day.day,
+                                        22,
+                                      ),
+                                );
+                              }
+                            }
+                          },
+                          child: _anchor(
+                            c,
+                            isWake
+                                ? scale.wake
+                                : scale.bed ?? scale.predictedBed,
+                            isWake
+                                ? 'Wake-up'
+                                : scale.bed != null
+                                ? 'Bedtime'
+                                : 'Predicted bedtime',
+                            isWake ? 'wake_up_icon.png' : 'bedtime_icon.png',
                           ),
-                          Expanded(
-                            child: InkWell(
-                              key: const ValueKey(
-                                'debug_predicted_bedtime_button',
-                              ),
-                              hoverColor: Colors.transparent,
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: () {
-                                final bedEntry = c
-                                    .scheduleEntriesForDay(day)
-                                    .where(
-                                      (e) => e.kind == ActivityKind.bedtime,
-                                    )
-                                    .firstOrNull;
-                                final start =
-                                    scale.bed ??
-                                    scale.predictedBed ??
-                                    DateTime(day.year, day.month, day.day, 22);
-                                if (bedEntry != null) {
-                                  showEntrySummary(context, c, bedEntry);
-                                } else {
-                                  showPredictionSummary(
-                                    context,
-                                    c,
-                                    ActivityKind.bedtime,
-                                    start: start,
-                                  );
-                                }
-                              },
-                              child: _anchor(
-                                c,
-                                scale.bed ?? scale.predictedBed,
-                                scale.bed != null
-                                    ? 'Bedtime'
-                                    : 'Predicted bedtime',
-                                'bedtime_icon.png',
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
                 ],
               ),
             );
@@ -698,7 +698,12 @@ class ScheduleDial extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 6),
-      Text(label, style: const TextStyle(color: muted, fontSize: 12)),
+      Text(
+        label,
+        textAlign: TextAlign.center,
+        maxLines: 2,
+        style: const TextStyle(color: muted, fontSize: 12),
+      ),
     ],
   );
 

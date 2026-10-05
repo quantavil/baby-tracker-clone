@@ -44,6 +44,8 @@ See [parity root-cause investigation](docs/parity-causes.md) for the fixture exp
 
 ## ARM64 APK releases
 
+[Download the installable APK](https://github.com/quantavil/baby-tracker-clone/releases/latest/download/baby-tracker-arm64.apk). Use this `.apk` file; GitHub’s Source code ZIP/TAR downloads are source archives and cannot be installed on Android. Requires ARM64 and Android 7.0 or newer.
+
 Each push to `main` builds one signed release APK for `arm64-v8a` and publishes it on [GitHub Releases](https://github.com/quantavil/baby-tracker-clone/releases). Flutter 3.47.5, its package cache, and Gradle dependencies are cached; superseded builds are cancelled. No web, iOS, emulator, or other ABI jobs run. Manual builds are also available in Actions.
 
 CI signing uses `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD` repository secrets, with alias `baby-tracker`. Keep the private key backed up to preserve Android update compatibility. Build numbers increase with each workflow run. Local builds without signing environment variables use the development debug key.

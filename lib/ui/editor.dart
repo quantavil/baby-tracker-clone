@@ -347,17 +347,23 @@ Future<void> showEntrySummary(
               ),
               const SizedBox(height: 24),
               Text(
-                durationLabel(c.elapsed(current)),
+                current.kind == ActivityKind.wakeUp ||
+                        current.kind == ActivityKind.bedtime
+                    ? clockLabel(current.start, c.profile)
+                    : durationLabel(c.elapsed(current)),
                 style: const TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                '${clockLabel(current.start, c.profile)} - ${current.end == null ? 'now' : clockLabel(current.end!, c.profile)}',
-                style: const TextStyle(color: muted, fontSize: 16),
-              ),
+              if (current.kind != ActivityKind.wakeUp &&
+                  current.kind != ActivityKind.bedtime) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '${clockLabel(current.start, c.profile)} - ${current.end == null ? 'now' : clockLabel(current.end!, c.profile)}',
+                  style: const TextStyle(color: muted, fontSize: 16),
+                ),
+              ],
               if (current.note.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),

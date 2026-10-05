@@ -44,8 +44,13 @@ jobs:
       - name: Verify APK architecture
         run: |
           python3 - <<'PYTHON'
-          import zipfile
+          import os, subprocess, zipfile
+          from pathlib import Path
+          signer = sorted(Path(os.environ['ANDROID_HOME']).glob('build-tools/*/apksigner'))[-1]
+          subprocess.run([str(signer), 'verify', '--verbose', 'baby-tracker-arm64.apk'], check=True)
           with zipfile.ZipFile('baby-tracker-arm64.apk') as apk:
+              assert apk.testzip() is None, 'Corrupt APK archive'
+              assert 'AndroidManifest.xml' in apk.namelist(), 'Missing Android manifest'
               abis = {p.split('/')[1] for p in apk.namelist() if p.startswith('lib/') and p.endswith('.so')}
               assert abis == {'arm64-v8a'}, f'Unexpected APK ABIs: {abis}'
           PYTHON

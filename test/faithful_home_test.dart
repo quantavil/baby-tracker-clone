@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:baby_tracker/model.dart';
@@ -10,6 +11,109 @@ import 'package:baby_tracker/ui/editor.dart';
 import 'controller_test.dart' show MemoryStorage;
 
 void main() {
+  testWidgets('recorded wake opens a clock summary before editing', (t) async {
+    final now = DateTime(2026, 10, 5, 11, 51);
+    final c = TrackerController(MemoryStorage(), clock: () => now);
+    await c.load();
+    await c.saveEntry(
+      ActivityEntry(
+        id: 'w',
+        kind: ActivityKind.wakeUp,
+        start: DateTime(2026, 10, 5, 7, 20),
+      ),
+    );
+    await t.pumpWidget(
+      MaterialApp(
+        theme: trackerTheme(),
+        home: Scaffold(
+          body: ScheduleDial(controller: c, day: now),
+        ),
+      ),
+    );
+    await t.tap(find.byKey(const ValueKey('debug_wake_up_button')));
+    await t.pumpAndSettle();
+    expect(find.text('Edit'), findsOneWidget);
+    expect(find.byType(ActivityEditor), findsNothing);
+    expect(find.text('7:20 AM'), findsWidgets);
+    expect(find.text('7:20 AM - now'), findsNothing);
+  });
+
+  testWidgets(
+    'original empty Overview is a four-card grid with missing values',
+    (t) async {
+      final now = DateTime(2026, 10, 5, 12);
+      final c = TrackerController(MemoryStorage(), clock: () => now);
+      await c.load();
+      await t.pumpWidget(
+        MaterialApp(
+          theme: trackerTheme(),
+          home: Scaffold(
+            body: HomePage(controller: c, day: now, onDay: (_) {}),
+          ),
+        ),
+      );
+      await t.scrollUntilVisible(find.text('Night sleep'), 400);
+      expect(find.text('Daytime awake'), findsOneWidget);
+      expect(find.text('Total sleep'), findsOneWidget);
+      expect(find.text('Log today’s data'), findsNWidgets(4));
+      expect(
+        t.getTopLeft(find.text('Day sleep')).dy,
+        closeTo(t.getTopLeft(find.text('Night sleep')).dy, 1),
+      );
+      expect(find.text('Overview · Today'), findsOneWidget);
+      expect(t.takeException(), isNull);
+    },
+  );
+
+  testWidgets('dial anchors align with the painted track endpoints', (t) async {
+    final now = DateTime(2026, 10, 5, 11, 51);
+    final c = TrackerController(MemoryStorage(), clock: () => now);
+    await c.load();
+    await c.saveEntry(
+      ActivityEntry(
+        id: 'w',
+        kind: ActivityKind.wakeUp,
+        start: DateTime(2026, 10, 5, 11, 23),
+      ),
+    );
+    for (final width in [320.0, 412.0]) {
+      await t.pumpWidget(
+        MaterialApp(
+          theme: trackerTheme(),
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: width,
+                child: ScheduleDial(controller: c, day: now),
+              ),
+            ),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      final painting = find.byType(CustomPaint).first;
+      final origin = t.getTopLeft(painting);
+      final center = origin + Offset(width / 2, width / 2);
+      final wakeIcon = find.byWidgetPredicate(
+        (w) =>
+            w is Image &&
+            w.image is AssetImage &&
+            (w.image as AssetImage).assetName.endsWith('/wake_up_icon.png'),
+      );
+      final expected =
+          center +
+          Offset(math.cos(math.pi * .75), math.sin(math.pi * .75)) *
+              (width * .445);
+      expect((t.getCenter(wakeIcon) - expected).distance, lessThan(1));
+      expect(
+        t.getSize(find.byKey(const ValueKey('debug_wake_up_button'))).width,
+        lessThan(width / 2),
+      );
+      expect(t.takeException(), isNull);
+    }
+  });
+
   testWidgets(
     'recorded nap summary exposes confirmed deletion and persists it',
     (t) async {
@@ -193,9 +297,9 @@ void main() {
           ),
         ),
       );
-      await t.scrollUntilVisible(find.text('Logged naps'), 300);
+      await t.scrollUntilVisible(find.text('Night sleep'), 300);
       expect(find.text('19 h 49 min'), findsNothing);
-      expect(find.text('0 h 0 min'), findsWidgets);
+      expect(find.text('-'), findsWidgets);
     },
   );
 

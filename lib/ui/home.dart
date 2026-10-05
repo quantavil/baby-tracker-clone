@@ -36,6 +36,31 @@ class _HomePageState extends State<HomePage> {
               e.kind == ActivityKind.wakeUp || e.kind == ActivityKind.bedtime,
         );
     final showNight = night && hasSchedule;
+    final scheduleEntries = c.scheduleEntriesForDay(day);
+    final daySleep = c.totalForDay(
+      day,
+      forSchedule: true,
+      includeOngoing: DateUtils.isSameDay(day, c.now),
+    );
+    final nightSleep = c.nightSleepForDay(day);
+    final hasDaySleep = scheduleEntries.any((e) => e.kind == ActivityKind.nap);
+    final hasNightSleep = nightSleep > Duration.zero;
+    final wake = scheduleEntries
+        .where((e) => e.kind == ActivityKind.wakeUp)
+        .firstOrNull
+        ?.start;
+    final bed = scheduleEntries
+        .where(
+          (e) =>
+              e.kind == ActivityKind.bedtime &&
+              (wake == null || e.start.isAfter(wake)),
+        )
+        .firstOrNull
+        ?.start;
+    final awakeEnd = bed ?? (DateUtils.isSameDay(day, c.now) ? c.now : null);
+    final awake = wake != null && awakeEnd != null && awakeEnd.isAfter(wake)
+        ? awakeEnd.difference(wake) - daySleep
+        : null;
     return Stack(
       children: [
         Positioned(
@@ -317,7 +342,7 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         Expanded(
                           child: Text(
-                            'Overview · ${shortDate(day, c.now)}',
+                            'Overview · ${DateUtils.isSameDay(day, c.now) ? 'Today' : shortDate(day, c.now)}',
                             style: Theme.of(context).textTheme.headlineMedium,
                           ),
                         ),
@@ -341,33 +366,65 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    _overview(
-                      context,
-                      'Day sleep',
-                      durationLabel(
-                        c.totalForDay(
-                          day,
-                          forSchedule: true,
-                          includeOngoing:
-                              DateUtils.isSameDay(day, c.now) &&
-                              c.active != null &&
-                              DateUtils.isSameDay(c.active!.start, day),
+                    for (final row in [
+                      [
+                        (
+                          'Day sleep',
+                          hasDaySleep ? durationLabel(daySleep) : '-',
+                          'nap',
+                          hasDaySleep ? 'Logged naps' : 'Log today’s data',
                         ),
+                        (
+                          'Night sleep',
+                          hasNightSleep ? durationLabel(nightSleep) : '-',
+                          'bedtime',
+                          hasNightSleep ? 'Logged sleep' : 'Log today’s data',
+                        ),
+                      ],
+                      [
+                        (
+                          'Total sleep',
+                          hasDaySleep || hasNightSleep
+                              ? durationLabel(daySleep + nightSleep)
+                              : '-',
+                          'total_sleep',
+                          hasDaySleep || hasNightSleep
+                              ? 'Recorded sleep'
+                              : 'Log today’s data',
+                        ),
+                        (
+                          'Daytime awake',
+                          awake != null
+                              ? durationLabel(
+                                  awake < Duration.zero ? Duration.zero : awake,
+                                )
+                              : '-',
+                          'activity_time',
+                          awake != null
+                              ? 'Recorded awake time'
+                              : 'Log today’s data',
+                        ),
+                      ],
+                    ]) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (var i = 0; i < row.length; i++) ...[
+                            if (i > 0) const SizedBox(width: 12),
+                            Expanded(
+                              child: _overview(
+                                context,
+                                row[i].$1,
+                                row[i].$2,
+                                row[i].$4,
+                                row[i].$3,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      'Logged naps',
-                    ),
-                    const SizedBox(height: 12),
-                    _overview(
-                      context,
-                      'Night sleep',
-                      durationLabel(c.nightSleepForDay(day)),
-                      'Logged bedtime to wake-up',
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Add bedtime and wake-up logs to complete your night-sleep history.',
-                      style: TextStyle(color: muted, fontSize: 12),
-                    ),
+                      const SizedBox(height: 12),
+                    ],
                   ]
                   .map(
                     (child) => child is _DaySchedule || child is _NightSchedule
@@ -388,33 +445,39 @@ class _HomePageState extends State<HomePage> {
     String title,
     String value,
     String caption,
+    String asset,
   ) => Container(
-    padding: const EdgeInsets.all(18),
+    padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
       color: surface.withValues(alpha: .75),
       borderRadius: BorderRadius.circular(18),
     ),
-    child: Row(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.bedtime_outlined, color: lavender, size: 28),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title),
-              const SizedBox(height: 5),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 23,
-                  fontWeight: FontWeight.w600,
-                ),
+        Row(
+          children: [
+            Image.asset(
+              'assets/tracking/icons/$asset.webp',
+              width: 28,
+              height: 28,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(color: muted, fontSize: 14),
               ),
-              Text(caption, style: const TextStyle(color: muted, fontSize: 12)),
-            ],
-          ),
+            ),
+          ],
         ),
+        const SizedBox(height: 14),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        Text(caption, style: const TextStyle(color: muted, fontSize: 12)),
       ],
     ),
   );
