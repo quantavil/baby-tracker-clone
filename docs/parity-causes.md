@@ -25,7 +25,7 @@ The original machine code contains a broader pipeline:
 
 Raw disassembly is in local `evidence/docs/faithful-reconstruction/` and supplementary `evidence/research/`. Named calls and branches support the pipeline above; generic snapshot field decodes are not complete Dart source.
 
-Other provisional behavior is explicit in current code: historical predicted bedtime defaults to 22:00; profiles without birthdays use age nine months; the learning banner counts calendar dates containing any nap, including ongoing naps. The banner is not driven by the original data-validity pipeline. The new hidden-session recovery card also changes layout and has not been recovered as an original screen element.
+Other provisional behavior is explicit in current code: historical predicted bedtime defaults to 22:00; the learning banner counts calendar dates containing any nap, including ongoing naps. The banner is not driven by the original data-validity pipeline. The former missing-birthday age-nine fallback was corrected to the recovered age-zero rule on October 5; see `prediction-fix-2026-10-05.md`. The new hidden-session recovery card also changes layout and has not been recovered as an original screen element.
 
 ## Evidence and tooling limits
 
