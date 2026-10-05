@@ -39,8 +39,8 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           flutter pub get --enforce-lockfile
-          flutter build apk --release --no-pub --target-platform android-arm64 --build-number "$GITHUB_RUN_NUMBER"
-          cp build/app/outputs/flutter-apk/app-release.apk baby-tracker-arm64.apk
+          flutter build apk --release --no-pub --target-platform android-arm64 --split-per-abi --build-number "$GITHUB_RUN_NUMBER"
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk baby-tracker-arm64.apk
       - name: Verify APK architecture
         run: |
           python3 - <<'PYTHON'
