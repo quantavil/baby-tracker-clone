@@ -18,6 +18,24 @@ class FixtureStorage implements TrackerStorage {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (const bool.fromEnvironment('PREDICTION_CASE')) {
+    // Frozen screenshot comparison only; calculations use records and profile.
+    final c = TrackerController(
+      FixtureStorage(),
+      clock: () => DateTime(2026, 10, 5, 11, 51, 30),
+    );
+    await c.load();
+    await c.updateProfile(const BabyProfile(name: 'Job', use24Hour: true));
+    await c.saveEntry(
+      ActivityEntry(
+        id: 'fixture-wake',
+        kind: ActivityKind.wakeUp,
+        start: DateTime(2026, 10, 5, 11, 23),
+      ),
+    );
+    runApp(BabyTrackerApp(controller: c));
+    return;
+  }
   // Anchor the comparison date, but let interactive timers advance normally.
   final elapsed = Stopwatch()..start();
   const overlapCase = bool.fromEnvironment('OVERLAP_CASE');

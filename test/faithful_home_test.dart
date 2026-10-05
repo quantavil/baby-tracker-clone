@@ -582,6 +582,31 @@ void main() {
     expect(find.text('6 h 0 min'), findsNothing);
     expect(t.takeException(), isNull);
   });
+  test('missing birthday uses original zero-age six-nap forecast', () {
+    final wake = DateTime(2026, 10, 5, 11, 23);
+    final now = DateTime(2026, 10, 5, 11, 51, 30);
+    final scale = DialScale(
+      [ActivityEntry(id: 'w', kind: ActivityKind.wakeUp, start: wake)],
+      now,
+      const BabyProfile(),
+      now,
+    );
+    expect(scale.scheduled.length, 6);
+    expect(
+      scale.scheduled
+          .map(
+            (n) =>
+                '${n.start.hour}:${n.start.minute.toString().padLeft(2, '0')}',
+          )
+          .toList(),
+      ['12:23', '14:45', '17:06', '19:26', '21:46', '0:05'],
+    );
+    expect(scale.scheduled.last.end.hour, 1);
+    expect(scale.scheduled.last.end.minute, 14);
+    expect(scale.predictedBed, DateTime(2026, 10, 6, 2, 23));
+    expect(scale.scheduled.first.start.difference(now).inMinutes, 31);
+  });
+
   test(
     'recovered initial schedule has six naps and a fifteen-hour newborn day',
     () {

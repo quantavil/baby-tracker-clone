@@ -791,8 +791,10 @@ class DialScale {
         )
         .firstOrNull
         ?.start;
+    // AgeCalculator.uncappedAgeInMonthsFromBirthday (0x65c252) uses
+    // AppClock.now as the birth date when null, producing age zero.
     final age = profile.birthday == null
-        ? 9.0
+        ? 0.0
         : ((now ?? day).difference(profile.birthday!).inDays / 30.0).clamp(
             0.0,
             24.0,
@@ -927,37 +929,64 @@ class DialPainter extends CustomPainter {
         final a = angle(nap.start.isBefore(from) ? from : nap.start);
         final b = angle(nap.end.isAfter(until) ? until : nap.end);
         if (b > a) {
-          final fillPaint = Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 24
-            ..strokeCap = StrokeCap.round
-            ..color = const Color(0x33B49AD9);
-          canvas.drawArc(rect, a, b - a, false, fillPaint);
-
-          final borderPaint = Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.5
-            ..strokeCap = StrokeCap.round
-            ..color = const Color(0x66B49AD9);
-          canvas.drawArc(rect, a, b - a, false, borderPaint);
+          const halfWidth = 14.0;
+          final outer = Rect.fromCircle(
+            center: center,
+            radius: radius + halfWidth,
+          );
+          final inner = Rect.fromCircle(
+            center: center,
+            radius: radius - halfWidth,
+          );
+          final startCenter =
+              center + Offset(math.cos(a), math.sin(a)) * radius;
+          final endCenter = center + Offset(math.cos(b), math.sin(b)) * radius;
+          final slot = Path()
+            ..arcTo(outer, a, b - a, true)
+            ..arcTo(
+              Rect.fromCircle(center: endCenter, radius: halfWidth),
+              b,
+              math.pi,
+              false,
+            )
+            ..arcTo(inner, b, a - b, false)
+            ..arcTo(
+              Rect.fromCircle(center: startCenter, radius: halfWidth),
+              a + math.pi,
+              math.pi,
+              false,
+            )
+            ..close();
+          // Original forecasts are closed outlined capsules, with a dark
+          // interior that masks the track and a pink-to-purple border.
+          canvas.drawPath(slot, Paint()..color = const Color(0xFF231F32));
+          canvas.drawPath(
+            slot,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1.6
+              ..shader = ui.Gradient.linear(startCenter, endCenter, const [
+                Color(0xFFC6ABB6),
+                Color(0xFFAA8BD5),
+              ]),
+          );
 
           final offset =
               center + Offset(math.cos(a), math.sin(a)) * (radius + 18);
+          var rotation = a + math.pi / 2;
+          if (math.cos(rotation) < 0) rotation += math.pi;
           final label = TextPainter(
             text: TextSpan(
               text: dialTimeLabel(nap.start, profile),
-              style: const TextStyle(
-                fontSize: 11,
-                color: muted,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontSize: 12, color: muted),
             ),
             textDirection: TextDirection.ltr,
           )..layout();
-          label.paint(
-            canvas,
-            offset - Offset(label.width / 2, label.height / 2),
-          );
+          canvas.save();
+          canvas.translate(offset.dx, offset.dy);
+          canvas.rotate(rotation);
+          label.paint(canvas, Offset(-label.width / 2, -label.height / 2));
+          canvas.restore();
         }
       }
     }

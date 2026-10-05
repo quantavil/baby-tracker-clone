@@ -55,7 +55,7 @@ A follow-up Today check detected the six temporary October 2 records had returne
 - Stable release: http://127.0.0.1:8765/ . Memory comparison fixture: http://127.0.0.1:8765/faithful/ (select Thursday).
 - No Git remote is configured; pushing is unavailable. Full reconstruction remains open.
 
-Existing clone profiles without a birthday retain a two-nap fallback (age 9), a compatibility decision rather than recovered original onboarding behavior. New-profile onboarding remains unfinished.
+The former missing-birthday age-9 fallback was removed on October 5 after tracing the original age calculator. Null birthday resolves to age zero; onboarding remains incomplete. See `docs/prediction-fix-2026-10-05.md`.
 
 
 ## Hidden timer and marker hover correction (2026-10-02)
