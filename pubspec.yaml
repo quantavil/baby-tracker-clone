@@ -1,0 +1,48 @@
+name: baby_tracker
+description: Evidence-based local Baby Tracker reconstruction.
+publish_to: none
+version: 0.1.0+1
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+dependencies:
+  cupertino_icons: ^2.0.0
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.5.3
+  web: ^1.1.1
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/common/
+    - assets/common/mascot/
+    - assets/common/premium/
+    - assets/common/whats_new/
+    - assets/main_screen/
+    - assets/main_screen/bottom_navigation_bar/
+    - assets/main_screen/schedule_info/main_screen_info/buttons/horizontal_button/
+    - assets/main_screen/schedule_info/main_screen_info/buttons/square_button/
+    - assets/main_screen/schedule_info/schedule_circle/
+    - assets/tabs/history/
+    - assets/tabs/home/
+    - assets/tabs/settings/
+    - assets/tabs/stats/
+    - assets/tracking/headers/
+    - assets/tracking/icons/
+    - assets/tracking/buttons/
+  fonts:
+    - family: RobotoFlex
+      fonts:
+        - asset: assets/fonts/RobotoFlex-Regular.ttf
+    - family: SFPro
+      fonts:
+        - asset: assets/fonts/SF-Pro-Text-Regular.ttf
+    - family: SourceSerif4
+      fonts:
+        - asset: assets/fonts/SourceSerif4-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/SourceSerif4-Bold.ttf
+          weight: 700
