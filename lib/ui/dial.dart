@@ -824,7 +824,8 @@ class DialScale {
         : SleepBaseline.initialNapCount(age);
     final totalSlots = math.max(targetCount, loggedNaps.length);
 
-    final wakeWindows = SleepBaseline.windows(baseline.awake, targetCount + 1);
+    final baselineWakeWindows =
+        SleepBaseline.windows(baseline.awake, targetCount + 1);
     final napWindows = SleepBaseline.windows(
       baseline.daySleep,
       targetCount,
@@ -832,8 +833,9 @@ class DialScale {
     );
     Duration napDuration(int i) =>
         SleepBaseline.minutes(napWindows[i.clamp(0, napWindows.length - 1)]);
-    Duration wakeDuration(int i) =>
-        SleepBaseline.minutes(wakeWindows[i.clamp(0, wakeWindows.length - 1)]);
+    Duration wakeDuration(int i) => SleepBaseline.minutes(
+      baselineWakeWindows[i.clamp(0, baselineWakeWindows.length - 1)],
+    );
 
     final refWake =
         wake ??
@@ -883,10 +885,78 @@ class DialScale {
       }
     }
     scheduled = List.unmodifiable(list);
+
+    norm = ReferenceSleepNorms.forAgeInMonths(age);
+    final completedNaps = loggedNaps
+        .where((e) => !e.ongoing && e.end != null && e.end!.isAfter(e.start))
+        .toList();
+    final wwList = <WakeWindowItem>[];
+    if (wake != null) {
+      var cursor = wake!;
+      var wwIdx = 1;
+      for (final nap in completedNaps) {
+        if (nap.start.isAfter(cursor)) {
+          final dur = nap.start.difference(cursor);
+          final status = dur < norm.wakeWindow.min
+              ? WakeWindowStatus.short
+              : (dur > norm.wakeWindow.max
+                  ? WakeWindowStatus.long
+                  : WakeWindowStatus.ok);
+          wwList.add(
+            WakeWindowItem(
+              index: wwIdx++,
+              start: cursor,
+              end: nap.start,
+              duration: dur,
+              status: status,
+            ),
+          );
+        }
+        if (nap.end != null && nap.end!.isAfter(cursor)) {
+          cursor = nap.end!;
+        }
+      }
+      if (bed != null) {
+        if (bed!.isAfter(cursor)) {
+          final dur = bed!.difference(cursor);
+          final status = dur < norm.wakeWindow.min
+              ? WakeWindowStatus.short
+              : (dur > norm.wakeWindow.max
+                  ? WakeWindowStatus.long
+                  : WakeWindowStatus.ok);
+          wwList.add(
+            WakeWindowItem(
+              index: wwIdx++,
+              start: cursor,
+              end: bed,
+              duration: dur,
+              status: status,
+            ),
+          );
+        }
+      } else if (now != null && DateUtils.isSameDay(day, now)) {
+        final hasOngoingNap = loggedNaps.any((e) => e.ongoing);
+        if (!hasOngoingNap && now.isAfter(cursor)) {
+          final dur = now.difference(cursor);
+          wwList.add(
+            WakeWindowItem(
+              index: wwIdx++,
+              start: cursor,
+              end: null,
+              duration: dur,
+              status: WakeWindowStatus.current,
+            ),
+          );
+        }
+      }
+    }
+    wakeWindows = List.unmodifiable(wwList.reversed);
   }
 
   late final DateTime? wake, bed, predictedBed;
   late final List<ScheduledNap> scheduled;
+  late final List<WakeWindowItem> wakeWindows;
+  late final SleepNormBand norm;
   late DateTime from, until;
 
   double angle(DateTime t) {

@@ -47,10 +47,13 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 
-# Local APK analysis, captures, raw graphs and reverse-engineering receipts
-/evidence/
-
 # Private Android signing material
 *.jks
 *.keystore
 /key.properties
+
+# Original app APKs and raw device captures (may hold account data)
+/apk/
+/research/state/
+/traces/**/raw/
+/evidence/

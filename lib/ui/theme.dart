@@ -149,6 +149,44 @@ String shortDate(DateTime d, DateTime now) {
   return '${today ? 'Today' : weekdays[d.weekday - 1]}, ${months[d.month - 1]} ${d.day}';
 }
 
+/// Home day label recovered from TrackingDataUtils._homeDayLabel (0x8b4bf4):
+/// Today -> "Today"; < 7 days ago -> capitalized weekday (e.g. "Thursday");
+/// >= 7 days ago -> "Oct 1".
+String homeDayLabel(DateTime d, DateTime now) {
+  final today = d.year == now.year && d.month == now.month && d.day == now.day;
+  if (today) return 'Today';
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  const weekdays = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+  final todayDate = DateTime(now.year, now.month, now.day);
+  final targetDate = DateTime(d.year, d.month, d.day);
+  final diffDays = todayDate.difference(targetDate).inDays;
+  if (diffDays >= 0 && diffDays < 7) {
+    return weekdays[d.weekday - 1];
+  }
+  return '${months[d.month - 1]} ${d.day}';
+}
+
 String clockLabel(DateTime t, BabyProfile p) => p.use24Hour
     ? '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}'
     : '${t.hour % 12 == 0 ? 12 : t.hour % 12}:${t.minute.toString().padLeft(2, '0')} ${t.hour < 12 ? 'AM' : 'PM'}';

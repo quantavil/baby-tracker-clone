@@ -381,6 +381,70 @@ class TrackerController extends ChangeNotifier {
         .fold(Duration.zero, (sum, e) => sum + _durationBetween(e, from, to));
   }
 
+  Duration? daytimeAwakeForDay(DateTime day) {
+    final scheduleEntries = scheduleEntriesForDay(day);
+    final wake = scheduleEntries
+        .where((e) => e.kind == ActivityKind.wakeUp)
+        .firstOrNull
+        ?.start;
+    final bed = scheduleEntries
+        .where(
+          (e) =>
+              e.kind == ActivityKind.bedtime &&
+              (wake == null || e.start.isAfter(wake)),
+        )
+        .firstOrNull
+        ?.start;
+    final isToday = day.year == now.year && day.month == now.month && day.day == now.day;
+    final awakeEnd = bed ?? (isToday ? now : null);
+    if (wake == null || awakeEnd == null || !awakeEnd.isAfter(wake)) {
+      return null;
+    }
+    final daySleep = totalForDay(day, forSchedule: true, includeOngoing: isToday);
+    final rawAwake = awakeEnd.difference(wake) - daySleep;
+    return rawAwake.isNegative ? Duration.zero : rawAwake;
+  }
+
+  bool hasDaySleepForDay(DateTime day) =>
+      scheduleEntriesForDay(day).any((e) => e.kind == ActivityKind.nap);
+
+  bool hasNightSleepForDay(DateTime day) =>
+      nightSleepForDay(day) > Duration.zero;
+
+  bool hasTotalSleepForDay(DateTime day) =>
+      hasDaySleepForDay(day) || hasNightSleepForDay(day);
+
+  String previousDayComparisonCaption({
+    required DateTime day,
+    required Duration? currentDuration,
+    required Duration? previousDuration,
+    required bool hasCurrentData,
+    required bool hasPreviousData,
+  }) {
+    final isToday = day.year == now.year && day.month == now.month && day.day == now.day;
+    if (!hasCurrentData) {
+      return isToday ? 'Log today’s data' : 'Log previous day’s data';
+    }
+    if (!hasPreviousData || currentDuration == null || previousDuration == null) {
+      return 'Log previous day’s data';
+    }
+    final diffMinutes = currentDuration.inMinutes - previousDuration.inMinutes;
+    if (diffMinutes == 0) {
+      return 'Same as previous day';
+    }
+    final sign = diffMinutes > 0 ? '+' : '-';
+    final absDiff = diffMinutes.abs();
+    final String formatted;
+    if (absDiff >= 60) {
+      final hours = absDiff ~/ 60;
+      final minutes = absDiff % 60;
+      formatted = minutes == 0 ? '$hours h' : '$hours h $minutes min';
+    } else {
+      formatted = '$absDiff min';
+    }
+    return '$sign$formatted vs previous day';
+  }
+
   /// Old saved records remain available for correction in History. A sleep
   /// interval containing an explicit wake-up cannot drive the day schedule.
   List<ActivityEntry> scheduleEntriesForDay(DateTime day) => entriesForDay(day)

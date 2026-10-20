@@ -286,112 +286,131 @@ Future<void> showEntrySummary(
 ) => showModalBottomSheet<void>(
   context: context,
   useSafeArea: true,
-  backgroundColor: ink,
+  backgroundColor: Colors.transparent,
   isScrollControlled: true,
-  shape: const RoundedRectangleBorder(
-    borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-  ),
   builder: (ctx) => AnimatedBuilder(
     animation: c,
     builder: (ctx, _) {
       final current =
           c.entries.where((e) => e.id == entry.id).firstOrNull ?? entry;
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    key: const ValueKey('summary-delete-entry'),
-                    tooltip: 'Delete',
+      final isWake = current.kind == ActivityKind.wakeUp;
+      return Container(
+        decoration: BoxDecoration(
+          color: isWake ? null : ink,
+          gradient: isWake
+              ? const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF382F54), Color(0xFF221C35)],
+                )
+              : null,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    if (!isWake)
+                      IconButton(
+                        key: const ValueKey('summary-delete-entry'),
+                        tooltip: 'Delete',
+                        onPressed: c.writing
+                            ? null
+                            : () async {
+                                final yes = await confirmDeleteActivity(ctx);
+                                if (!yes || !ctx.mounted || c.writing) return;
+                                final ok = await perform(
+                                  ctx,
+                                  () => c.deleteEntry(current.id),
+                                );
+                                if (ok && ctx.mounted) Navigator.pop(ctx);
+                              },
+                        icon: Image.asset(
+                          'assets/common/delete_icon.webp',
+                          width: 26,
+                          height: 26,
+                        ),
+                      )
+                    else
+                      const SizedBox(width: 48),
+                    Expanded(
+                      child: Text(
+                        current.kind.label,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(ctx).textTheme.headlineMedium,
+                      ),
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: .12),
+                      ),
+                      child: IconButton(
+                        key: const ValueKey('debug_tracking_event_close_button'),
+                        tooltip: 'Close',
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Image.asset(
+                  'assets/tracking/headers/${current.kind.asset}.webp',
+                  height: 148,
+                  errorBuilder: (_, _, _) => ActivityIcon(current.kind, size: 96),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  current.kind == ActivityKind.wakeUp ||
+                          current.kind == ActivityKind.bedtime
+                      ? clockLabel(current.start, c.profile)
+                      : durationLabel(c.elapsed(current)),
+                  style: const TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (current.kind != ActivityKind.wakeUp &&
+                    current.kind != ActivityKind.bedtime) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '${clockLabel(current.start, c.profile)} - ${current.end == null ? 'now' : clockLabel(current.end!, c.profile)}',
+                    style: const TextStyle(color: muted, fontSize: 16),
+                  ),
+                ],
+                if (current.note.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(current.note),
+                  ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    key: const ValueKey('debug_tracking_event_primary_button'),
                     onPressed: c.writing
                         ? null
                         : () async {
-                            final yes = await confirmDeleteActivity(ctx);
-                            if (!yes || !ctx.mounted || c.writing) return;
-                            final ok = await perform(
-                              ctx,
-                              () => c.deleteEntry(current.id),
-                            );
-                            if (ok && ctx.mounted) Navigator.pop(ctx);
+                            Navigator.pop(ctx);
+                            if (context.mounted) {
+                              await showEditor(
+                                context,
+                                c,
+                                current.kind,
+                                entry: current,
+                              );
+                            }
                           },
-                    icon: Image.asset(
-                      'assets/common/delete_icon.webp',
-                      width: 26,
-                      height: 26,
-                    ),
+                    child: const Text('Edit'),
                   ),
-                  Expanded(
-                    child: Text(
-                      current.kind.label,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(ctx).textTheme.headlineMedium,
-                    ),
-                  ),
-                  IconButton(
-                    key: const ValueKey('debug_tracking_event_close_button'),
-                    tooltip: 'Close',
-                    onPressed: () => Navigator.pop(ctx),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Image.asset(
-                'assets/tracking/headers/${current.kind.asset}.webp',
-                height: 148,
-                errorBuilder: (_, _, _) => ActivityIcon(current.kind, size: 96),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                current.kind == ActivityKind.wakeUp ||
-                        current.kind == ActivityKind.bedtime
-                    ? clockLabel(current.start, c.profile)
-                    : durationLabel(c.elapsed(current)),
-                style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (current.kind != ActivityKind.wakeUp &&
-                  current.kind != ActivityKind.bedtime) ...[
-                const SizedBox(height: 8),
-                Text(
-                  '${clockLabel(current.start, c.profile)} - ${current.end == null ? 'now' : clockLabel(current.end!, c.profile)}',
-                  style: const TextStyle(color: muted, fontSize: 16),
                 ),
               ],
-              if (current.note.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(current.note),
-                ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  key: const ValueKey('debug_tracking_event_primary_button'),
-                  onPressed: c.writing
-                      ? null
-                      : () async {
-                          await showEditor(
-                            ctx,
-                            c,
-                            current.kind,
-                            entry: current,
-                          );
-                          if (ctx.mounted &&
-                              !c.entries.any((e) => e.id == current.id)) {
-                            Navigator.pop(ctx);
-                          }
-                        },
-                  child: const Text('Edit'),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       );

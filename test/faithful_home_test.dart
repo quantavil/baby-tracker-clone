@@ -681,7 +681,7 @@ void main() {
       ),
     );
     await t.pumpAndSettle();
-    await t.scrollUntilVisible(find.text('Logged naps'), 300);
+    await t.scrollUntilVisible(find.text('Day sleep'), 300);
     expect(find.text('1 h 0 min'), findsWidgets);
     expect(find.text('6 h 0 min'), findsNothing);
     expect(t.takeException(), isNull);
@@ -823,5 +823,173 @@ void main() {
           .data,
       '2 h',
     );
+  });
+
+  test('homeDayLabel produces original weekday and date rules', () {
+    final now = DateTime(2026, 10, 5, 12);
+    expect(homeDayLabel(DateTime(2026, 10, 5), now), 'Today');
+    expect(homeDayLabel(DateTime(2026, 10, 1), now), 'Thursday');
+    expect(homeDayLabel(DateTime(2026, 9, 20), now), 'Sep 20');
+  });
+
+  test('previousDayComparisonCaption generates original comparison strings', () {
+    final now = DateTime(2026, 10, 5);
+    final c = TrackerController(MemoryStorage(), clock: () => now);
+    expect(
+      c.previousDayComparisonCaption(
+        day: now,
+        currentDuration: null,
+        previousDuration: null,
+        hasCurrentData: false,
+        hasPreviousData: false,
+      ),
+      'Log today’s data',
+    );
+    expect(
+      c.previousDayComparisonCaption(
+        day: DateTime(2026, 10, 1),
+        currentDuration: const Duration(hours: 6),
+        previousDuration: null,
+        hasCurrentData: true,
+        hasPreviousData: false,
+      ),
+      'Log previous day’s data',
+    );
+    expect(
+      c.previousDayComparisonCaption(
+        day: DateTime(2026, 10, 2),
+        currentDuration: const Duration(minutes: 60),
+        previousDuration: const Duration(minutes: 60),
+        hasCurrentData: true,
+        hasPreviousData: true,
+      ),
+      'Same as previous day',
+    );
+    expect(
+      c.previousDayComparisonCaption(
+        day: DateTime(2026, 10, 2),
+        currentDuration: const Duration(minutes: 75),
+        previousDuration: const Duration(minutes: 60),
+        hasCurrentData: true,
+        hasPreviousData: true,
+      ),
+      '+15 min vs previous day',
+    );
+    expect(
+      c.previousDayComparisonCaption(
+        day: DateTime(2026, 10, 2),
+        currentDuration: const Duration(minutes: 45),
+        previousDuration: const Duration(minutes: 60),
+        hasCurrentData: true,
+        hasPreviousData: true,
+      ),
+      '-15 min vs previous day',
+    );
+  });
+
+  testWidgets('pinned header keeps date and day strip visible when scrolled', (
+    t,
+  ) async {
+    t.view.physicalSize = const Size(412, 915);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    final now = DateTime(2026, 10, 1, 12);
+    final c = TrackerController(MemoryStorage(), clock: () => now);
+    await c.load();
+    await t.pumpWidget(
+      MaterialApp(
+        theme: trackerTheme(),
+        home: Scaffold(
+          body: HomePage(controller: c, day: now, onDay: (_) {}),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    final headerTopBefore =
+        t.getTopLeft(find.byKey(const ValueKey('home_pinned_header'))).dy;
+    await t.scrollUntilVisible(find.text('Night sleep'), 400);
+    final headerTopAfter =
+        t.getTopLeft(find.byKey(const ValueKey('home_pinned_header'))).dy;
+    expect(headerTopBefore, headerTopAfter);
+  });
+
+  testWidgets('wake windows section renders common range label and badges', (
+    t,
+  ) async {
+    t.view.physicalSize = const Size(412, 915);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    final now = DateTime(2026, 10, 5, 14, 0);
+    final c = TrackerController(MemoryStorage(), clock: () => now);
+    await c.load();
+    await c.updateProfile(
+      BabyProfile(name: 'Leo', birthday: DateTime(2026, 4, 5)),
+    );
+    await c.saveEntry(
+      ActivityEntry(
+        id: 'w',
+        kind: ActivityKind.wakeUp,
+        start: DateTime(2026, 10, 5, 7),
+      ),
+    );
+    await c.saveEntry(
+      ActivityEntry(
+        id: 'n1',
+        kind: ActivityKind.nap,
+        start: DateTime(2026, 10, 5, 9),
+        end: DateTime(2026, 10, 5, 10),
+      ),
+    );
+    await t.pumpWidget(
+      MaterialApp(
+        theme: trackerTheme(),
+        home: Scaffold(
+          body: HomePage(controller: c, day: now, onDay: (_) {}),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(
+      find.byKey(const ValueKey('wake_windows_section')),
+      400,
+    );
+    expect(find.text('Wake windows'), findsOneWidget);
+    expect(find.text('Common for this age: 2 - 3 h'), findsOneWidget);
+    expect(find.text('1st wake window'), findsOneWidget);
+    expect(find.text('Within range'), findsOneWidget);
+  });
+
+  testWidgets('night schedule unifies bedtime with predicted bedtime', (
+    t,
+  ) async {
+    t.view.physicalSize = const Size(412, 915);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    final now = DateTime(2026, 10, 5, 11, 51, 30);
+    final c = TrackerController(MemoryStorage(), clock: () => now);
+    await c.load();
+    await c.saveEntry(
+      ActivityEntry(
+        id: 'w',
+        kind: ActivityKind.wakeUp,
+        start: DateTime(2026, 10, 5, 11, 23),
+      ),
+    );
+    await t.pumpWidget(
+      MaterialApp(
+        theme: trackerTheme(),
+        home: Scaffold(
+          body: HomePage(controller: c, day: now, onDay: (_) {}),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('schedule-night')));
+    await t.pumpAndSettle();
+    // Zero-age predicted bedtime for 11:23 wake is 2:23 AM (02:23)
+    expect(find.text('2:23 AM'), findsOneWidget);
   });
 }
